@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinTrack — Kelola Keuangan Usaha Anda</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #0a0e1a;
+  --bg2: #111827;
+  --bg3: #1a2236;
+  --card: #151e2e;
+  --card2: #1e2d42;
+  --accent: #00e5b4;
+  --accent2: #0066ff;
+  --accent3: #ff6b35;
+  --warn: #ffcc00;
+  --danger: #ff3d6b;
+  --success: #00e5b4;
+  --text: #e8edf5;
+  --text2: #8a9ab5;
+  --text3: #5a6a85;
+  --border: rgba(255,255,255,0.07);
+  --glass: rgba(255,255,255,0.04);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  --glow: 0 0 30px rgba(0,229,180,0.15);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+#app-page { overflow-x: auto; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--accent2); border-radius: 10px; }
+.page { display: none; min-height: 100vh; }
+.page.active { display: block; }
+#login-page.active { display: flex; }
+#notif-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+.notif { background: var(--card2); border-left: 4px solid var(--warn); border-radius: var(--radius-sm); padding: 14px 18px; display: flex; align-items: center; gap: 12px; max-width: 340px; box-shadow: var(--shadow); animation: slideIn .3s ease; font-size: 14px; }
+.notif.danger { border-color: var(--danger); }
+.notif.success { border-color: var(--success); }
+.notif i { font-size: 18px; color: var(--warn); }
+.notif.danger i { color: var(--danger); }
+.notif.success i { color: var(--success); }
+.notif-close { margin-left: auto; cursor: pointer; color: var(--text3); padding: 2px 6px; }
+@keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+#login-page { display: flex; align-items: center; justify-content: center; background: var(--bg); position: relative; overflow: hidden; }
+.login-bg { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 60% 50% at 20% 80%, rgba(0,102,255,0.15) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 80% 20%, rgba(0,229,180,0.1) 0%, transparent 60%); }
+.login-grid { position: absolute; inset: 0; background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 60px 60px; opacity: .4; }
+.login-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 52px 44px; width: 420px; position: relative; z-index: 1; box-shadow: var(--shadow), var(--glow); }
+.login-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.login-logo-icon { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, var(--accent2), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 22px; color: #fff; }
+.login-logo h1 { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.login-tagline { color: var(--text3); font-size: 13px; margin-bottom: 36px; }
+.login-label { font-size: 12px; font-weight: 500; color: var(--text2); letter-spacing: .5px; margin-bottom: 8px; text-transform: uppercase; }
+.login-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; transition: border-color .2s; margin-bottom: 20px; }
+.login-input:focus { border-color: var(--accent2); }
+.login-btn { width: 100%; background: linear-gradient(135deg, var(--accent2), var(--accent)); border: none; border-radius: var(--radius-sm); padding: 15px; color: #fff; font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; transition: all .2s; margin-top: 4px; }
+.login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,102,255,0.4); }
+.login-hint { text-align: center; color: var(--text3); font-size: 12px; margin-top: 16px; }
+.login-error { color: var(--danger); font-size: 13px; margin-top: -12px; margin-bottom: 12px; display: none; }
+.app-layout { display: flex; min-height: 100vh; }
+.sidebar { width: 240px; background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; transition: width .3s ease, transform .3s ease; overflow: hidden; }
+.sidebar.collapsed { width: 0; transform: translateX(-240px); }
+.sidebar-toggle { width: 36px; height: 36px; border-radius: var(--radius-sm); background: var(--glass); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text2); font-size: 15px; transition: all .2s; flex-shrink: 0; }
+.sidebar-toggle:hover { color: var(--accent); border-color: var(--accent); }
+.sidebar-logo { padding: 28px 24px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+.sidebar-logo-icon { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, var(--accent2), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; }
+.sidebar-logo h2 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+.sidebar-section { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; padding: 12px 12px 6px; font-weight: 600; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--radius-sm); cursor: pointer; color: var(--text2); font-size: 14px; transition: all .2s; margin-bottom: 2px; }
+.nav-item:hover { background: var(--glass); color: var(--text); }
+.nav-item.active { background: linear-gradient(135deg, rgba(0,102,255,.2), rgba(0,229,180,.1)); color: var(--accent); border: 1px solid rgba(0,229,180,.15); }
+.nav-item.active i { color: var(--accent); }
+.nav-item i { width: 18px; text-align: center; font-size: 15px; }
+.nav-badge { margin-left: auto; background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+.sidebar-bottom { padding: 16px 12px; border-top: 1px solid var(--border); }
+.sidebar-user { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--glass); }
+.sidebar-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent2), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
+.sidebar-username { font-size: 13px; font-weight: 500; }
+.sidebar-role { font-size: 11px; color: var(--text3); }
+.logout-btn { width: 100%; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px; color: var(--text3); font-size: 13px; cursor: pointer; transition: all .2s; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+.main-content { margin-left: 240px; flex: 1; min-height: 100vh; min-width: 0; overflow-x: auto; transition: margin-left .3s ease; }
+.topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.topbar-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.topbar-icon { width: 38px; height: 38px; border-radius: var(--radius-sm); background: var(--glass); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text2); font-size: 15px; transition: all .2s; position: relative; }
+.topbar-icon:hover { color: var(--accent); border-color: var(--accent); }
+.topbar-icon .badge { position: absolute; top: -4px; right: -4px; background: var(--danger); color: #fff; font-size: 9px; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.section-page { padding: 28px 32px; display: none; animation: fadeUp .3s ease both; }
+.section-page.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+.card-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.stat-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--text); line-height: 1.1; }
+.stat-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.stat-change { font-size: 12px; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+.stat-change.up { color: var(--success); }
+.stat-change.down { color: var(--danger); }
+.stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 16px; }
+.alert { border-radius: var(--radius-sm); padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px; font-size: 13px; margin-bottom: 16px; border: 1px solid; }
+.alert-warn { background: rgba(255,204,0,.08); border-color: rgba(255,204,0,.3); color: var(--warn); }
+.alert-danger { background: rgba(255,61,107,.08); border-color: rgba(255,61,107,.3); color: var(--danger); }
+.alert-success { background: rgba(0,229,180,.08); border-color: rgba(0,229,180,.3); color: var(--success); }
+.alert-info { background: rgba(0,102,255,.08); border-color: rgba(0,102,255,.3); color: #6fb3ff; }
+.alert i { margin-top: 1px; flex-shrink: 0; }
+.alert-text { color: var(--text); line-height: 1.5; }
+.alert-text strong { font-weight: 600; }
+.chart-wrap { position: relative; height: 260px; }
+.target-bar-wrap { margin-top: 12px; }
+.target-bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+.target-bar { height: 8px; background: var(--bg3); border-radius: 10px; overflow: hidden; }
+.target-bar-fill { height: 100%; border-radius: 10px; transition: width 1s ease; }
+.btn { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: var(--radius-sm); padding: 10px 20px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s; }
+.btn-primary { background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #fff; }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,102,255,.4); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 7px 14px; font-size: 12px; }
+.page-header { margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; }
+.page-header h2 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; }
+.page-header p { color: var(--text3); font-size: 13px; margin-top: 4px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { margin-bottom: 0; }
+.form-label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; display: block; font-weight: 600; }
+.form-input, .form-select { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color .2s; }
+.form-input:focus, .form-select:focus { border-color: var(--accent2); }
+.form-select option { background: var(--bg2); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th { background: var(--bg3); padding: 12px 16px; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; text-align: left; border-bottom: 1px solid var(--border); }
+tbody td { padding: 13px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+tbody tr:hover td { background: var(--glass); }
+tbody tr:last-child td { border-bottom: none; }
+.td-debit { color: #6fb3ff; }
+.td-kredit { color: var(--success); }
+.td-balance { color: var(--warn); font-weight: 600; }
+.badge-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-debit { background: rgba(111,179,255,.15); color: #6fb3ff; }
+.badge-kredit { background: rgba(0,229,180,.15); color: var(--success); }
+.neraca-header { background: linear-gradient(135deg, var(--accent2), var(--accent)); border-radius: var(--radius); padding: 24px 28px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+.neraca-header h3 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #fff; }
+.neraca-header p { font-size: 13px; color: rgba(255,255,255,.7); margin-top: 4px; }
+.import-box { border: 2px dashed var(--border); border-radius: var(--radius); padding: 36px; text-align: center; cursor: pointer; transition: all .2s; }
+.import-box:hover { border-color: var(--accent2); background: rgba(0,102,255,.04); }
+.import-icon { font-size: 36px; color: var(--accent2); margin-bottom: 12px; }
+.import-box p { color: var(--text2); font-size: 14px; }
+.import-box span { color: var(--accent2); font-weight: 600; }
+.analysis-item { display: flex; align-items: flex-start; gap: 16px; padding: 20px; border-bottom: 1px solid var(--border); }
+.analysis-item:last-child { border-bottom: none; }
+.analysis-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.analysis-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.analysis-desc { font-size: 12px; color: var(--text3); line-height: 1.5; }
+.dot-glow { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.dot-green { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.dot-red { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.dot-yellow { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+.divider { height: 1px; background: var(--border); margin: 24px 0; }
+.unbalanced-warn { background: rgba(255,61,107,.1); border: 1px solid rgba(255,61,107,.3); border-radius: var(--radius-sm); padding: 10px 14px; margin-top: 8px; color: var(--danger); font-size: 13px; display: none; align-items: center; gap: 8px; }
+.unbalanced-warn.show { display: flex; }
+.fin-summary-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.fin-summary-row:last-child { border-bottom: none; }
+.fin-summary-label { font-size: 13px; color: var(--text2); }
+.fin-summary-value { font-size: 14px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="notif-container"></div>
+
+<!-- LOGIN -->
+<div id="login-page" class="page active">
+  <div class="login-bg"></div>
+  <div class="login-grid"></div>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon"><i class="fas fa-chart-line"></i></div>
+      <h1>FinTrack</h1>
+    </div>
+    <p class="login-tagline">Platform Manajemen Keuangan Usaha Terpadu</p>
+    <label class="login-label">Username</label>
+    <input type="text" class="login-input" id="login-user" placeholder="Masukkan username">
+    <label class="login-label">Kata Sandi</label>
+    <input type="password" class="login-input" id="login-pass" placeholder="Masukkan sandi">
+    <p class="login-error" id="login-err"><i class="fas fa-exclamation-circle"></i> Username atau sandi salah</p>
+    <button class="login-btn" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> &nbsp;Masuk ke FinTrack</button>
+    <p class="login-hint">Demo: username <strong>admin</strong> / sandi <strong>1234</strong></p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-page" class="page">
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon"><i class="fas fa-chart-line"></i></div>
+        <h2>FinTrack</h2>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-section">Utama</div>
+        <div class="nav-item active" onclick="showSection('beranda', this)"><i class="fas fa-home"></i> Beranda</div>
+        <div class="nav-item" onclick="showSection('notifikasi', this)"><i class="fas fa-bell"></i> Notifikasi <span class="nav-badge" id="notif-badge">3</span></div>
+        <div class="sidebar-section">Transaksi</div>
+        <div class="nav-item" onclick="showSection('input', this)"><i class="fas fa-plus-circle"></i> Input Transaksi</div>
+        <div class="sidebar-section">Laporan</div>
+        <div class="nav-item" onclick="showSection('analisa', this)"><i class="fas fa-chart-bar"></i> Analisa Keuangan</div>
+        <div class="nav-item" onclick="showSection('jurnal', this)"><i class="fas fa-book"></i> Jurnal Umum</div>
+        <div class="nav-item" onclick="showSection('buku-besar', this)"><i class="fas fa-book-open"></i> Buku Besar</div>
+        <div class="nav-item" onclick="showSection('neraca', this)"><i class="fas fa-balance-scale"></i> Neraca</div>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sb-avatar">A</div>
+          <div>
+            <div class="sidebar-username" id="sb-name">Admin</div>
+            <div class="sidebar-role">Pemilik Usaha</div>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Keluar</button>
+      </div>
+    </aside>
+
+    <div class="main-content">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="sidebar-toggle" onclick="toggleSidebar()" title="Sembunyikan/Tampilkan Menu"><i class="fas fa-bars"></i></div>
+          <div class="topbar-title" id="topbar-title">Beranda</div>
+        </div>
+        <div class="topbar-right">
+          <div class="topbar-icon" onclick="showSection('notifikasi', null)">
+            <i class="fas fa-bell"></i>
+            <span class="badge" id="topbar-badge">3</span>
+          </div>
+          <div class="topbar-icon"><i class="fas fa-cog"></i></div>
+        </div>
+      </div>
+
+      <!-- BERANDA -->
+      <div class="section-page active" id="sec-beranda">
+        <div class="page-header">
+          <div>
+            <h2>Selamat Datang, <span id="greet-name">Admin</span> 👋</h2>
+            <p>Ringkasan keuangan usaha Anda hari ini</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="showSection('input', null)"><i class="fas fa-plus"></i> Tambah Transaksi</button>
+        </div>
+        <div id="beranda-alerts"></div>
+        <div class="grid-4" style="margin-bottom:24px">
+          <div class="card">
+            <div class="stat-icon" style="background:rgba(0,102,255,.15)"><i class="fas fa-wallet" style="color:var(--accent2)"></i></div>
+            <div class="card-title">Total Aset</div>
+            <div class="stat-value" id="stat-aset">Rp 0</div>
+            <div class="stat-change up"><i class="fas fa-arrow-up"></i> 12% bulan ini</div>
+          </div>
+          <div class="card">
+            <div class="stat-icon" style="background:rgba(255,61,107,.15)"><i class="fas fa-credit-card" style="color:var(--danger)"></i></div>
+            <div class="card-title">Total Utang</div>
+            <div class="stat-value" id="stat-utang">Rp 0</div>
+            <div class="stat-change down"><i class="fas fa-arrow-down"></i> 3% bulan ini</div>
+          </div>
+          <div class="card">
+            <div class="stat-icon" style="background:rgba(0,229,180,.15)"><i class="fas fa-arrow-down" style="color:var(--success)"></i></div>
+            <div class="card-title">Total Pendapatan</div>
+            <div class="stat-value" id="stat-pendapatan">Rp 0</div>
+            <div class="stat-change up"><i class="fas fa-arrow-up"></i> 8% bulan ini</div>
+          </div>
+          <div class="card">
+            <div class="stat-icon" style="background:rgba(255,107,53,.15)"><i class="fas fa-arrow-up" style="color:var(--accent3)"></i></div>
+            <div class="card-title">Total Pengeluaran</div>
+            <div class="stat-value" id="stat-pengeluaran">Rp 0</div>
+            <div class="stat-sub" id="stat-budget-warn" style="color:var(--warn);display:none"><i class="fas fa-exclamation-triangle"></i> Mendekati batas budget!</div>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-bottom:24px">
+          <div class="card">
+            <div class="card-title"><i class="fas fa-chart-area"></i> Grafik Keuangan Bulanan</div>
+            <div class="chart-wrap"><canvas id="chart-bulanan"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fas fa-bullseye"></i> Target Keuangan</div>
+            <div id="target-status"></div>
+            <div class="divider"></div>
+            <div class="target-bar-wrap">
+              <div class="target-bar-label"><span>Pendapatan vs Target</span><span id="target-pct">0%</span></div>
+              <div class="target-bar"><div class="target-bar-fill" id="target-bar-fill" style="width:0%;background:var(--success)"></div></div>
+            </div>
+            <div class="target-bar-wrap" style="margin-top:12px">
+              <div class="target-bar-label"><span>Pengeluaran vs Budget</span><span id="budget-pct">0%</span></div>
+              <div class="target-bar"><div class="target-bar-fill" id="budget-bar-fill" style="width:0%;background:var(--accent2)"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-history"></i> Transaksi Terbaru</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Tanggal</th><th>Transaksi</th><th>Akun</th><th>Debit</th><th>Kredit</th><th>Tipe</th></tr></thead>
+              <tbody id="recent-tbody"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">Belum ada transaksi</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTIFIKASI -->
+      <div class="section-page" id="sec-notifikasi">
+        <div class="page-header">
+          <div><h2>Notifikasi Keuangan</h2><p>Peringatan dan informasi penting keuangan Anda</p></div>
+          <button class="btn btn-outline btn-sm" onclick="clearNotifs()"><i class="fas fa-trash"></i> Hapus Semua</button>
+        </div>
+        <div id="notif-list"></div>
+      </div>
+
+      <!-- INPUT -->
+      <div class="section-page" id="sec-input">
+        <div class="page-header">
+          <div><h2>Input Transaksi</h2><p>Catat transaksi keuangan usaha Anda</p></div>
+        </div>
+        <div class="grid-2" style="margin-bottom:24px">
+          <div class="card" id="method-manual-card" style="cursor:pointer;border-color:var(--accent2)" onclick="setMethod('manual')">
+            <div style="display:flex;align-items:center;gap:14px">
+              <div class="stat-icon" style="background:rgba(0,102,255,.15);margin-bottom:0"><i class="fas fa-keyboard" style="color:var(--accent2)"></i></div>
+              <div><div style="font-weight:600">Input Manual</div><div style="font-size:12px;color:var(--text3)">Isi form transaksi satu per satu</div></div>
+            </div>
+          </div>
+          <div class="card" id="method-excel-card" style="cursor:pointer" onclick="setMethod('excel')">
+            <div style="display:flex;align-items:center;gap:14px">
+              <div class="stat-icon" style="background:rgba(0,229,180,.15);margin-bottom:0"><i class="fas fa-file-excel" style="color:var(--success)"></i></div>
+              <div><div style="font-weight:600">Impor dari Excel</div><div style="font-size:12px;color:var(--text3)">Upload file .xlsx / .xls</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="form-manual">
+          <div class="card-title"><i class="fas fa-edit"></i> Form Transaksi Manual</div>
+          <div class="form-grid" style="margin-bottom:16px">
+            <div class="form-group">
+              <label class="form-label">Tanggal Transaksi</label>
+              <input type="date" class="form-input" id="trx-tanggal">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nama Transaksi</label>
+              <input type="text" class="form-input" id="trx-nama" placeholder="Contoh: Pembelian Bahan Baku">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nama Akun</label>
+              <select class="form-select" id="trx-akun">
+                <option value="">-- Pilih Akun --</option>
+                <option>Kas</option><option>Bank BRI</option><option>Bank BCA</option>
+                <option>Piutang Usaha</option><option>Utang Usaha</option>
+                <option>Pendapatan Penjualan</option><option>Biaya Operasional</option>
+                <option>Biaya Gaji</option><option>Biaya Sewa</option><option>Modal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tipe Transaksi</label>
+              <select class="form-select" id="trx-tipe" onchange="checkBalance()">
+                <option value="debit">Debit (Pengeluaran)</option>
+                <option value="kredit">Kredit (Pemasukan)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Jumlah Debit (Rp)</label>
+              <input type="number" class="form-input" id="trx-debit" placeholder="0" oninput="checkBalance()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Jumlah Kredit (Rp)</label>
+              <input type="number" class="form-input" id="trx-kredit" placeholder="0" oninput="checkBalance()">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:16px">
+            <label class="form-label">Keterangan</label>
+            <input type="text" class="form-input" id="trx-ket" placeholder="Keterangan tambahan (opsional)">
+          </div>
+          <div class="unbalanced-warn" id="unbalanced-warn">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span><strong>Peringatan:</strong> Nilai debit dan kredit tidak seimbang! Selisih: <span id="selisih-val">0</span></span>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:20px">
+            <button class="btn btn-primary" onclick="addTransaction()"><i class="fas fa-plus"></i> Simpan Transaksi</button>
+            <button class="btn btn-outline" onclick="resetForm()"><i class="fas fa-undo"></i> Reset</button>
+          </div>
+        </div>
+        <div class="card" id="form-excel" style="display:none">
+          <div class="card-title"><i class="fas fa-file-excel"></i> Impor dari Excel</div>
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            <div class="alert-text">Format kolom Excel: <strong>Tanggal | Nama Transaksi | Nama Akun | Debit | Kredit | Keterangan</strong></div>
+          </div>
+          <div class="import-box" onclick="document.getElementById('excel-file').click()">
+            <div class="import-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+            <p>Klik atau <span>seret file Excel</span> ke sini</p>
+            <p style="font-size:12px;color:var(--text3);margin-top:8px">.xlsx, .xls — Maks 10MB</p>
+            <input type="file" id="excel-file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
+          </div>
+          <div id="excel-preview" style="margin-top:20px"></div>
+        </div>
+      </div>
+
+      <!-- ANALISA -->
+      <div class="section-page" id="sec-analisa">
+        <div class="page-header">
+          <div><h2>Analisa Keuangan</h2><p>Evaluasi mendalam performa keuangan usaha</p></div>
+        </div>
+        <div id="analisa-alerts" style="margin-bottom:20px"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title"><i class="fas fa-file-invoice-dollar"></i> Ringkasan Bulan Ini</div>
+            <div class="fin-summary-row"><span class="fin-summary-label">Total Pendapatan</span><span class="fin-summary-value" style="color:var(--success)" id="sum-pendapatan">Rp 0</span></div>
+            <div class="fin-summary-row"><span class="fin-summary-label">Total Pengeluaran</span><span class="fin-summary-value" style="color:var(--danger)" id="sum-pengeluaran">Rp 0</span></div>
+            <div class="fin-summary-row"><span class="fin-summary-label">Laba / Rugi</span><span class="fin-summary-value" id="sum-labarugi">Rp 0</span></div>
+            <div class="fin-summary-row"><span class="fin-summary-label">Total Aset</span><span class="fin-summary-value" id="sum-aset">Rp 0</span></div>
+            <div class="fin-summary-row"><span class="fin-summary-label">Total Utang</span><span class="fin-summary-value" style="color:var(--accent3)" id="sum-utang">Rp 0</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fas fa-chart-pie"></i> Grafik Laba Rugi</div>
+            <div class="chart-wrap"><canvas id="chart-labarugi"></canvas></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:20px">
+          <div class="card-title"><i class="fas fa-lightbulb"></i> Saran & Analisis</div>
+          <div id="saran-list"></div>
+        </div>
+      </div>
+
+      <!-- JURNAL -->
+      <div class="section-page" id="sec-jurnal">
+        <div class="page-header">
+          <div><h2>Jurnal Umum</h2><p>Catatan semua transaksi secara kronologis</p></div>
+          <button class="btn btn-outline btn-sm" onclick="exportJurnal()"><i class="fas fa-download"></i> Ekspor Excel</button>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-list"></i> Daftar Jurnal</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Tanggal</th><th>Nama Transaksi</th><th>Akun</th><th>Debit</th><th>Kredit</th><th>Keterangan</th></tr></thead>
+              <tbody id="jurnal-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">Belum ada data transaksi</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- BUKU BESAR -->
+      <div class="section-page" id="sec-buku-besar">
+        <div class="page-header">
+          <div><h2>Buku Besar</h2><p>Ringkasan saldo per akun</p></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-book-open"></i> Saldo per Akun</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nama Akun</th><th>Total Debit</th><th>Total Kredit</th><th>Saldo</th></tr></thead>
+              <tbody id="buku-tbody"><tr><td colspan="4" style="text-align:center;color:var(--text3);padding:24px">Belum ada data</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- NERACA -->
+      <div class="section-page" id="sec-neraca">
+        <div class="page-header">
+          <div><h2>Neraca</h2><p>Posisi keuangan usaha pada periode ini</p></div>
+        </div>
+        <div class="neraca-header">
+          <div>
+            <h3>FinTrack — Laporan Neraca</h3>
+            <p id="neraca-date">Periode: —</p>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:24px;font-weight:800;color:#fff" id="neraca-total">Rp 0</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.7)">Total Aset Bersih</div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title"><i class="fas fa-plus-circle"></i> Aset</div>
+            <div id="neraca-aset"></div>
+            <div class="divider"></div>
+            <div style="display:flex;justify-content:space-between;font-weight:700"><span>Total Aset</span><span id="neraca-total-aset" style="color:var(--success)">Rp 0</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fas fa-minus-circle"></i> Kewajiban & Modal</div>
+            <div id="neraca-liabilitas"></div>
+            <div class="divider"></div>
+            <div style="display:flex;justify-content:space-between;font-weight:700"><span>Total Kewajiban & Modal</span><span id="neraca-total-liab" style="color:var(--accent3)">Rp 0</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+let transactions = [];
+let budget = 15000000;
+let targetPendapatan = 20000000;
+let notifList = [];
+
+const demoTrx = [
+  { id:1, tanggal:'2025-01-05', nama:'Penjualan Produk A', akun:'Pendapatan Penjualan', debit:0, kredit:8500000, ket:'Penjualan bulan Januari' },
+  { id:2, tanggal:'2025-01-08', nama:'Pembelian Bahan Baku', akun:'Biaya Operasional', debit:3200000, kredit:0, ket:'Stok produksi' },
+  { id:3, tanggal:'2025-01-12', nama:'Pembayaran Gaji', akun:'Biaya Gaji', debit:4500000, kredit:0, ket:'Gaji karyawan' },
+  { id:4, tanggal:'2025-01-15', nama:'Penjualan Produk B', akun:'Pendapatan Penjualan', debit:0, kredit:6200000, ket:'' },
+  { id:5, tanggal:'2025-01-18', nama:'Bayar Sewa Gudang', akun:'Biaya Sewa', debit:1800000, kredit:0, ket:'Sewa bulan Januari' },
+  { id:6, tanggal:'2025-01-22', nama:'Setoran Modal', akun:'Modal', debit:0, kredit:10000000, ket:'Tambahan modal' },
+  { id:7, tanggal:'2025-01-25', nama:'Biaya Listrik & Air', akun:'Biaya Operasional', debit:850000, kredit:0, ket:'' },
+];
+transactions = [...demoTrx];
+
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value.trim();
+  const err = document.getElementById('login-err');
+  if (u === 'admin' && p === '1234') {
+    err.style.display = 'none';
+    document.getElementById('login-page').style.display = 'none';
+    document.getElementById('app-page').classList.add('active');
+    window.scrollTo(0, 0);
+    document.getElementById('sb-name').textContent = u.charAt(0).toUpperCase() + u.slice(1);
+    document.getElementById('sb-avatar').textContent = u.charAt(0).toUpperCase();
+    document.getElementById('greet-name').textContent = u.charAt(0).toUpperCase() + u.slice(1);
+    initApp();
+  } else {
+    err.style.display = 'flex';
+    err.style.alignItems = 'center';
+    err.style.gap = '6px';
+  }
+}
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogout() {
+  document.getElementById('app-page').classList.remove('active');
+  document.getElementById('login-page').style.display = '';
+  document.getElementById('login-page').classList.add('active');
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+const sectionTitles = { beranda:'Beranda', notifikasi:'Notifikasi Keuangan', input:'Input Transaksi', analisa:'Analisa Keuangan', jurnal:'Jurnal Umum', 'buku-besar':'Buku Besar', neraca:'Neraca' };
+
+function showSection(id, navEl) {
+  document.querySelectorAll('.section-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  if (navEl) navEl.classList.add('active');
+  document.getElementById('topbar-title').textContent = sectionTitles[id] || id;
+  renderSection(id);
+}
+
+function renderSection(id) {
+  if (id === 'beranda') renderBeranda();
+  if (id === 'notifikasi') renderNotifikasi();
+  if (id === 'analisa') renderAnalisa();
+  if (id === 'jurnal') renderJurnal();
+  if (id === 'buku-besar') renderBukuBesar();
+  if (id === 'neraca') renderNeraca();
+}
+
+function fmtRp(n) { return 'Rp ' + Math.abs(n).toLocaleString('id-ID'); }
+function getTotalKredit() { return transactions.reduce((a,t) => a + t.kredit, 0); }
+function getTotalDebit() { return transactions.reduce((a,t) => a + t.debit, 0); }
+function getAset() { return getTotalKredit(); }
+function getUtang() { return transactions.filter(t => t.akun === 'Utang Usaha').reduce((a,t) => a + t.debit, 0); }
+
+function initApp() {
+  initNotifs();
+  renderBeranda();
+  setTimeout(() => {
+    pushNotif('warn', 'Pengeluaran Mendekati Budget', 'Total pengeluaran sudah mencapai 87% dari batas budget bulan ini.');
+    pushNotif('danger', 'Debit Kredit Tidak Seimbang', 'Terdapat entri jurnal yang tidak seimbang. Silakan periksa.');
+    pushNotif('info', 'Laporan Bulanan Siap', 'Laporan keuangan bulan Januari sudah dapat diunduh.');
+  }, 1500);
+}
+
+let chartBulananInst = null;
+function renderBeranda() {
+  const pendapatan = getTotalKredit();
+  const pengeluaran = getTotalDebit();
+  const aset = getAset();
+  const utang = getUtang();
+  document.getElementById('stat-aset').textContent = fmtRp(aset);
+  document.getElementById('stat-utang').textContent = fmtRp(utang);
+  document.getElementById('stat-pendapatan').textContent = fmtRp(pendapatan);
+  document.getElementById('stat-pengeluaran').textContent = fmtRp(pengeluaran);
+  const budgetPct = Math.round((pengeluaran / budget) * 100);
+  const targetPct = Math.round((pendapatan / targetPendapatan) * 100);
+  document.getElementById('target-pct').textContent = Math.min(targetPct, 100) + '%';
+  document.getElementById('budget-pct').textContent = Math.min(budgetPct, 100) + '%';
+  setTimeout(() => {
+    document.getElementById('target-bar-fill').style.width = Math.min(targetPct, 100) + '%';
+    document.getElementById('budget-bar-fill').style.width = Math.min(budgetPct, 100) + '%';
+    if (budgetPct >= 80) document.getElementById('budget-bar-fill').style.background = 'var(--danger)';
+  }, 100);
+  document.getElementById('stat-budget-warn').style.display = budgetPct >= 80 ? 'flex' : 'none';
+  const alertsEl = document.getElementById('beranda-alerts');
+  alertsEl.innerHTML = '';
+  const laba = pendapatan - pengeluaran;
+  const targetStatus = document.getElementById('target-status');
+  if (laba > 0) {
+    alertsEl.innerHTML += `<div class="alert alert-success"><i class="fas fa-check-circle"></i><div class="alert-text"><strong>Keuangan Anda Stabil dan Aman!</strong> Pendapatan melebihi pengeluaran bulan ini.</div></div>`;
+    targetStatus.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="dot-glow dot-green"></span><span style="font-size:14px;font-weight:600;color:var(--success)">Status: Keuangan Stabil</span></div><p style="font-size:12px;color:var(--text3)">Laba bersih: <strong style="color:var(--success)">${fmtRp(laba)}</strong></p>`;
+  } else {
+    alertsEl.innerHTML += `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i><div class="alert-text"><strong>Peringatan: Usaha Merugi!</strong> Pengeluaran melebihi pendapatan sebesar ${fmtRp(Math.abs(laba))}.</div></div>`;
+    targetStatus.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="dot-glow dot-red"></span><span style="font-size:14px;font-weight:600;color:var(--danger)">Status: Usaha Merugi</span></div><p style="font-size:12px;color:var(--text3)">Kerugian: <strong style="color:var(--danger)">${fmtRp(Math.abs(laba))}</strong></p>`;
+  }
+  if (budgetPct >= 80) alertsEl.innerHTML += `<div class="alert alert-warn"><i class="fas fa-bell"></i><div class="alert-text"><strong>Peringatan Budget:</strong> Pengeluaran sudah ${budgetPct}% dari batas budget.</div></div>`;
+  const tbody = document.getElementById('recent-tbody');
+  const recent = transactions.slice(-5).reverse();
+  tbody.innerHTML = recent.length === 0
+    ? '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">Belum ada transaksi</td></tr>'
+    : recent.map(t => `<tr><td>${t.tanggal}</td><td>${t.nama}</td><td>${t.akun}</td><td class="td-debit">${t.debit ? fmtRp(t.debit) : '—'}</td><td class="td-kredit">${t.kredit ? fmtRp(t.kredit) : '—'}</td><td><span class="badge-pill ${t.debit ? 'badge-debit' : 'badge-kredit'}">${t.debit ? 'Debit' : 'Kredit'}</span></td></tr>`).join('');
+  const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const pendData = [8500000,6200000,9800000,7300000,11200000,8900000,10500000,9200000,11800000,8700000,12300000,getTotalKredit()];
+  const pengeData = [5500000,4800000,7200000,5900000,8100000,6700000,7800000,7100000,9200000,6900000,10100000,getTotalDebit()];
+  const ctx = document.getElementById('chart-bulanan').getContext('2d');
+  if (chartBulananInst) chartBulananInst.destroy();
+  chartBulananInst = new Chart(ctx, {
+    type: 'line',
+    data: { labels: months, datasets: [
+      { label: 'Pendapatan', data: pendData, borderColor: '#00e5b4', backgroundColor: 'rgba(0,229,180,0.1)', tension: .4, fill: true, pointRadius: 4, pointBackgroundColor: '#00e5b4' },
+      { label: 'Pengeluaran', data: pengeData, borderColor: '#ff3d6b', backgroundColor: 'rgba(255,61,107,0.08)', tension: .4, fill: true, pointRadius: 4, pointBackgroundColor: '#ff3d6b' }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#8a9ab5', font: { size: 12 } } } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a9ab5' } }, y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a9ab5', callback: v => 'Rp'+v/1e6+'jt' } } } }
+  });
+}
+
+function initNotifs() {
+  notifList = [
+    { id:1, type:'warn', icon:'fas fa-bell', title:'Pengeluaran Mendekati Budget', msg:'Total pengeluaran sudah 87% dari batas budget bulanan Rp 15.000.000.', time:'2 jam lalu' },
+    { id:2, type:'danger', icon:'fas fa-exclamation-triangle', title:'Performa Usaha Menurun', msg:'Pendapatan bulan ini lebih rendah 15% dibanding bulan lalu.', time:'1 hari lalu' },
+    { id:3, type:'info', icon:'fas fa-info-circle', title:'Laporan Bulanan', msg:'Laporan keuangan bulan Januari 2025 siap diunduh.', time:'3 hari lalu' },
+  ];
+}
+
+function renderNotifikasi() {
+  const el = document.getElementById('notif-list');
+  if (notifList.length === 0) { el.innerHTML = `<div class="card" style="text-align:center;padding:48px"><i class="fas fa-bell-slash" style="font-size:36px;color:var(--text3);margin-bottom:12px;display:block"></i><p style="color:var(--text3)">Tidak ada notifikasi</p></div>`; return; }
+  el.innerHTML = notifList.map(n => `<div class="card" style="margin-bottom:12px;border-left:4px solid var(--${n.type==='warn'?'warn':n.type==='danger'?'danger':'accent2'})"><div style="display:flex;align-items:flex-start;gap:14px"><i class="${n.icon}" style="color:var(--${n.type==='warn'?'warn':n.type==='danger'?'danger':'accent2'});font-size:18px;margin-top:2px"></i><div style="flex:1"><div style="font-weight:600;font-size:14px">${n.title}</div><div style="font-size:13px;color:var(--text3);margin-top:4px">${n.msg}</div><div style="font-size:11px;color:var(--text3);margin-top:8px">${n.time}</div></div><button onclick="removeNotif(${n.id})" style="background:transparent;border:none;color:var(--text3);cursor:pointer;padding:4px"><i class="fas fa-times"></i></button></div></div>`).join('');
+}
+
+function pushNotif(type, title, msg) {
+  const id = Date.now();
+  notifList.unshift({ id, type, icon: type==='danger'?'fas fa-exclamation-triangle':type==='warn'?'fas fa-bell':'fas fa-info-circle', title, msg, time: 'Baru saja' });
+  updateBadge();
+  const el = document.createElement('div');
+  el.className = `notif ${type}`;
+  el.innerHTML = `<i class="${type==='danger'?'fas fa-exclamation-triangle':type==='warn'?'fas fa-bell':'fas fa-info-circle'}"></i><span><strong>${title}</strong><br><span style="font-size:12px;color:var(--text3)">${msg.substring(0,60)}...</span></span><span class="notif-close" onclick="this.parentElement.remove()">✕</span>`;
+  document.getElementById('notif-container').appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
+
+function removeNotif(id) { notifList = notifList.filter(n => n.id !== id); updateBadge(); renderNotifikasi(); }
+function clearNotifs() { notifList = []; updateBadge(); renderNotifikasi(); }
+function updateBadge() { const n = notifList.length; document.getElementById('notif-badge').textContent = n; document.getElementById('topbar-badge').textContent = n; }
+
+function setMethod(m) {
+  document.getElementById('method-manual-card').style.borderColor = m==='manual' ? 'var(--accent2)' : 'var(--border)';
+  document.getElementById('method-excel-card').style.borderColor = m==='excel' ? 'var(--accent)' : 'var(--border)';
+  document.getElementById('form-manual').style.display = m==='manual' ? 'block' : 'none';
+  document.getElementById('form-excel').style.display = m==='excel' ? 'block' : 'none';
+}
+
+function checkBalance() {
+  const d = parseFloat(document.getElementById('trx-debit').value) || 0;
+  const k = parseFloat(document.getElementById('trx-kredit').value) || 0;
+  const warn = document.getElementById('unbalanced-warn');
+  if (d > 0 && k > 0 && d !== k) { warn.classList.add('show'); document.getElementById('selisih-val').textContent = fmtRp(Math.abs(d - k)); }
+  else { warn.classList.remove('show'); }
+}
+
+function addTransaction() {
+  const tanggal = document.getElementById('trx-tanggal').value;
+  const nama = document.getElementById('trx-nama').value.trim();
+  const akun = document.getElementById('trx-akun').value;
+  const debit = parseFloat(document.getElementById('trx-debit').value) || 0;
+  const kredit = parseFloat(document.getElementById('trx-kredit').value) || 0;
+  const ket = document.getElementById('trx-ket').value.trim();
+  if (!tanggal || !nama || !akun) { pushNotif('danger', 'Form Tidak Lengkap', 'Tanggal, nama transaksi, dan akun wajib diisi.'); return; }
+  if (debit === 0 && kredit === 0) { pushNotif('warn', 'Jumlah Kosong', 'Masukkan jumlah debit atau kredit.'); return; }
+  transactions.push({ id: Date.now(), tanggal, nama, akun, debit, kredit, ket });
+  const pct = (getTotalDebit() / budget) * 100;
+  if (pct >= 100) pushNotif('danger', 'Budget Terlampaui!', 'Total pengeluaran sudah melampaui batas budget.');
+  else if (pct >= 80) pushNotif('warn', 'Pengeluaran Mendekati Budget', `Total pengeluaran ${Math.round(pct)}% dari budget.`);
+  pushNotif('success', 'Transaksi Tersimpan', `${nama} berhasil dicatat.`);
+  resetForm();
+}
+
+function resetForm() {
+  ['trx-tanggal','trx-nama','trx-akun','trx-debit','trx-kredit','trx-ket'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('unbalanced-warn').classList.remove('show');
+}
+
+function importExcel(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      let imported = 0;
+      data.slice(1).forEach(row => { if (row[0] && row[1]) { transactions.push({ id: Date.now()+Math.random(), tanggal: row[0]||'', nama: row[1]||'', akun: row[2]||'Kas', debit: parseFloat(row[3])||0, kredit: parseFloat(row[4])||0, ket: row[5]||'' }); imported++; } });
+      document.getElementById('excel-preview').innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i><div class="alert-text"><strong>${imported} transaksi</strong> berhasil diimpor dari Excel.</div></div>`;
+      pushNotif('success', 'Import Berhasil', `${imported} transaksi dari Excel berhasil diimpor.`);
+    } catch(err) {
+      document.getElementById('excel-preview').innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i><div class="alert-text">Gagal membaca file Excel. Pastikan format sudah benar.</div></div>`;
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+let chartLRInst = null;
+function renderAnalisa() {
+  const pendapatan = getTotalKredit(), pengeluaran = getTotalDebit(), laba = pendapatan - pengeluaran;
+  document.getElementById('sum-pendapatan').textContent = fmtRp(pendapatan);
+  document.getElementById('sum-pengeluaran').textContent = fmtRp(pengeluaran);
+  document.getElementById('sum-aset').textContent = fmtRp(getAset());
+  document.getElementById('sum-utang').textContent = fmtRp(getUtang());
+  const labaEl = document.getElementById('sum-labarugi');
+  labaEl.textContent = (laba >= 0 ? '' : '- ') + fmtRp(Math.abs(laba));
+  labaEl.style.color = laba >= 0 ? 'var(--success)' : 'var(--danger)';
+  const el = document.getElementById('analisa-alerts');
+  el.innerHTML = '';
+  if (pengeluaran > pendapatan) {
+    el.innerHTML += `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i><div class="alert-text"><strong>Pengeluaran Lebih Besar dari Pemasukan!</strong> Anda mengalami kerugian sebesar ${fmtRp(Math.abs(laba))} bulan ini.</div></div>`;
+    el.innerHTML += `<div class="alert alert-warn"><i class="fas fa-times-circle"></i><div class="alert-text"><strong>Anda Mengalami Kerugian Bulan Ini.</strong> Evaluasi pos pengeluaran yang tidak produktif.</div></div>`;
+  } else {
+    el.innerHTML += `<div class="alert alert-success"><i class="fas fa-shield-alt"></i><div class="alert-text"><strong>Keuangan Anda Stabil dan Aman!</strong> Laba bersih bulan ini ${fmtRp(laba)}.</div></div>`;
+  }
+  const saranItems = [];
+  if (pengeluaran > pendapatan) {
+    saranItems.push({ icon:'fas fa-cut', color:'var(--danger)', bg:'rgba(255,61,107,.15)', title:'Kurangi Biaya Operasional', desc:'Tinjau dan kurangi pengeluaran yang tidak langsung berkontribusi pada pendapatan.' });
+    saranItems.push({ icon:'fas fa-chart-line', color:'var(--accent2)', bg:'rgba(0,102,255,.15)', title:'Tingkatkan Pendapatan', desc:'Eksplorasi sumber pendapatan baru atau tingkatkan strategi penjualan.' });
+  }
+  saranItems.push({ icon:'fas fa-piggy-bank', color:'var(--warn)', bg:'rgba(255,204,0,.15)', title:'Alokasikan Dana Darurat', desc:'Sisihkan minimal 10% dari pendapatan sebagai dana darurat usaha.' });
+  saranItems.push({ icon:'fas fa-file-invoice', color:'var(--success)', bg:'rgba(0,229,180,.15)', title:'Catat Setiap Transaksi', desc:'Pencatatan yang tertib membantu memantau arus kas dengan lebih baik.' });
+  document.getElementById('saran-list').innerHTML = saranItems.map(s => `<div class="analysis-item"><div class="analysis-icon" style="background:${s.bg}"><i class="${s.icon}" style="color:${s.color}"></i></div><div><div class="analysis-title">${s.title}</div><div class="analysis-desc">${s.desc}</div></div></div>`).join('');
+  const ctx2 = document.getElementById('chart-labarugi').getContext('2d');
+  if (chartLRInst) chartLRInst.destroy();
+  chartLRInst = new Chart(ctx2, { type:'doughnut', data: { labels:['Pendapatan','Pengeluaran'], datasets:[{ data:[pendapatan,pengeluaran], backgroundColor:['rgba(0,229,180,0.8)','rgba(255,61,107,0.8)'], borderWidth:0, hoverOffset:8 }] }, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#8a9ab5' } } }, cutout:'65%' } });
+}
+
+function renderJurnal() {
+  const tbody = document.getElementById('jurnal-tbody');
+  tbody.innerHTML = transactions.length === 0
+    ? '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">Belum ada data transaksi</td></tr>'
+    : transactions.map((t,i) => `<tr><td>${i+1}</td><td>${t.tanggal}</td><td>${t.nama}</td><td>${t.akun}</td><td class="td-debit">${t.debit?fmtRp(t.debit):'—'}</td><td class="td-kredit">${t.kredit?fmtRp(t.kredit):'—'}</td><td style="color:var(--text3)">${t.ket||'—'}</td></tr>`).join('');
+}
+
+function exportJurnal() {
+  const rows = [['No','Tanggal','Nama Transaksi','Akun','Debit','Kredit','Keterangan']];
+  transactions.forEach((t,i) => rows.push([i+1,t.tanggal,t.nama,t.akun,t.debit,t.kredit,t.ket]));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Jurnal Umum');
+  XLSX.writeFile(wb, 'FinTrack_Jurnal.xlsx');
+}
+
+function renderBukuBesar() {
+  const akunMap = {};
+  transactions.forEach(t => { if(!akunMap[t.akun]) akunMap[t.akun]={debit:0,kredit:0}; akunMap[t.akun].debit+=t.debit; akunMap[t.akun].kredit+=t.kredit; });
+  const entries = Object.entries(akunMap);
+  document.getElementById('buku-tbody').innerHTML = entries.length === 0
+    ? '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:24px">Belum ada data</td></tr>'
+    : entries.map(([akun,val]) => { const saldo=val.kredit-val.debit; return `<tr><td>${akun}</td><td class="td-debit">${fmtRp(val.debit)}</td><td class="td-kredit">${fmtRp(val.kredit)}</td><td style="color:${saldo>=0?'var(--success)':'var(--danger)'};font-weight:600">${saldo>=0?'':'-'}${fmtRp(Math.abs(saldo))}</td></tr>`; }).join('');
+}
+
+function renderNeraca() {
+  const akunAset = ['Kas','Bank BRI','Bank BCA','Piutang Usaha','Modal','Pendapatan Penjualan'];
+  const akunLiab = ['Utang Usaha','Biaya Operasional','Biaya Gaji','Biaya Sewa'];
+  const akunMap = {};
+  transactions.forEach(t => { if(!akunMap[t.akun]) akunMap[t.akun]={debit:0,kredit:0}; akunMap[t.akun].debit+=t.debit; akunMap[t.akun].kredit+=t.kredit; });
+  let totalAset=0, totalLiab=0;
+  const asetDisplay = Object.entries(akunMap).filter(([a]) => akunAset.includes(a));
+  const liabDisplay = Object.entries(akunMap).filter(([a]) => akunLiab.includes(a));
+  document.getElementById('neraca-aset').innerHTML = (asetDisplay.length ? asetDisplay : Object.entries(akunMap).filter(([a,v])=>v.kredit>0)).map(([a,v])=>{ const val=v.kredit||v.debit; totalAset+=val; return `<div class="fin-summary-row"><span class="fin-summary-label">${a}</span><span class="fin-summary-value" style="color:var(--success)">${fmtRp(val)}</span></div>`; }).join('') || '<div class="fin-summary-row"><span class="fin-summary-label" style="color:var(--text3)">Belum ada data</span></div>';
+  document.getElementById('neraca-liabilitas').innerHTML = (liabDisplay.length ? liabDisplay : Object.entries(akunMap).filter(([a,v])=>v.debit>0)).map(([a,v])=>{ const val=v.debit||v.kredit; totalLiab+=val; return `<div class="fin-summary-row"><span class="fin-summary-label">${a}</span><span class="fin-summary-value" style="color:var(--accent3)">${fmtRp(val)}</span></div>`; }).join('') || '<div class="fin-summary-row"><span class="fin-summary-label" style="color:var(--text3)">Belum ada data</span></div>';
+  document.getElementById('neraca-total-aset').textContent = fmtRp(totalAset);
+  document.getElementById('neraca-total-liab').textContent = fmtRp(totalLiab);
+  document.getElementById('neraca-total').textContent = fmtRp(Math.abs(totalAset-totalLiab));
+  document.getElementById('neraca-date').textContent = 'Periode: ' + new Date().toLocaleDateString('id-ID',{year:'numeric',month:'long',day:'numeric'});
+}
+
+document.getElementById('trx-tanggal').value = new Date().toISOString().split('T')[0];
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const mainContent = document.querySelector('.main-content');
+  const isCollapsed = sidebar.classList.toggle('collapsed');
+  mainContent.style.marginLeft = isCollapsed ? '0' : '240px';
+}
+</script>
+</body>
+</html>
